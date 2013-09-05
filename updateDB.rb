@@ -43,6 +43,7 @@ def getList(con, list, status, tableName)
                #puts("Updating")
                updateStatement = "UPDATE Movies SET " + getRottenValues(item, "update", status) + " WHERE rotten_id=" + item["id"]
                #puts updateStatement
+               puts "Updating rotten values for " + item["title"]
                con.query(updateStatement)
             else
                createStatement = "INSERT INTO " + tableName + "(created_at, rotten_id, imdb_id, status, title, year, mpaa_rating, runtime, theater_release, dvd_release, \
@@ -50,7 +51,8 @@ def getList(con, list, status, tableName)
                                                 rotten_tomatoes_audience_score, synopsis, artwork, thumbnail, cast_1, cast_2, cast_3, cast_4) \
                            VALUES(" + getRottenValues(item, "create", status) + ");"
                
-               #puts createStatement       
+               #puts createStatement     
+               puts "Creating rotten values for " + item["title"]
                con.query(createStatement)
                #puts("Creating")
             end
@@ -98,32 +100,38 @@ def getRottenValues(item, type, status)
 end
 
 def getTrailers(con, tableName)
-   result_set = con.query("SELECT `title` FROM " + tableName)
+   result_set = con.query("SELECT `title`, `trailer_checked` FROM " + tableName)
    n_rows = result_set.num_rows
 
    n_rows.times do |index|
-      title = result_set.fetch_row
-      setTrailerValues(con, title, tableName)
+      row = result_set.fetch_row
+      if row[1] == "true"
+         puts row[0] + "'s trailer has been verified accurate, skipping"
+      else
+         puts "Updating trailer for " + row[0]
+         setTrailerValues(con, row[0], tableName)
+      end
    end
    puts "Added all trailers..."
 end
 
 def setTrailerValues(con, title, tableName)
-   url = "http://trailersapi.com/trailers.json?movie=" + title[0].gsub("%","").gsub(" ", "%20").gsub("'", "")
-   # puts url
-   # url = "#{base_url}#{api_key}&limit=#{limit}"
-   resp = Net::HTTP.get_response(URI.parse(url))
-   data = resp.body
-   
-   # we convert the returned JSON data to native Ruby
-   # data structure - a hash
-   result = JSON.parse(data)
-
-   updateStatement = "UPDATE " + tableName + " SET trailer_link='" + sanitize((result[0] ? result[0]["code"].match(/src="(.+?)"/)[1] : ""), "string") + "' WHERE title='" + sanitize(title[0], "string") + "'"
-   # puts updateStatement
-   con.query(updateStatement)
-
-
+   begin
+      url = "http://trailersapi.com/trailers.json?movie=" + title[0].gsub("%","").gsub(" ", "%20").gsub("'", "")
+      # puts url
+      # url = "#{base_url}#{api_key}&limit=#{limit}"
+      resp = Net::HTTP.get_response(URI.parse(url))
+      data = resp.body
+      
+      # we convert the returned JSON data to native Ruby
+      # data structure - a hash
+      result = JSON.parse(data)
+      updateStatement = "UPDATE " + tableName + " SET trailer_link='" + sanitize((result[0] ? result[0]["code"].match(/src="(.+?)"/)[1] : ""), "string") + "' WHERE title='" + sanitize(title[0], "string") + "'"
+      # puts updateStatement
+      con.query(updateStatement)
+   rescue StandardError
+      puts "Error retreiving a trailer..."
+   end
 end
 
 def getIMDB(con, tableName)
@@ -154,6 +162,7 @@ def setIMDBValues(con, id, tableName)
 
       updateStatement = "UPDATE " + tableName + " SET " + getIMDBValues(result) + " WHERE imdb_id=" + id
       # puts updateStatement
+      puts "Updating IMDB values for " + id
       con.query(updateStatement)
    rescue StandardError => err
       puts "Error parsing json (some server error...)"
@@ -178,19 +187,15 @@ end
 
 con = Mysql.new 'movieinstance.cnybahrpes0y.us-west-2.rds.amazonaws.com', 'root', 'welcome08', 'myMovies'
 
-begin
-   getList(con, "movies/opening", "opening", "Movies")
-   getList(con, "movies/in_theaters", "in_theaters", "Movies")
-   getList(con, "movies/upcoming", "upcoming", "Movies")
-   getList(con, "dvds/current_releases", "current_release", "Movies")
-   getList(con, "dvds/new_releases", "new_release", "Movies")
-   getList(con, "dvds/upcoming", "upcoming_release", "Movies")
+getList(con, "movies/opening", "opening", "Movies")
+getList(con, "movies/in_theaters", "in_theaters", "Movies")
+getList(con, "movies/upcoming", "upcoming", "Movies")
+getList(con, "dvds/current_releases", "current_release", "Movies")
+getList(con, "dvds/new_releases", "new_release", "Movies")
+getList(con, "dvds/upcoming", "upcoming_release", "Movies")
 
-   getIMDB(con, "Movies")
-   getTrailers(con, "Movies")
-rescue Error
-   con.close()
-end
+getIMDB(con, "Movies")
+getTrailers(con, "Movies")
 
 con.close()
 
