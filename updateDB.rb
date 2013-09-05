@@ -140,7 +140,7 @@ def getIMDB(con, tableName)
 
    n_rows.times do |index|
       id = result_set.fetch_row
-      if index != -1
+      if index != -1 && id[0].to_s != "-1"
          setIMDBValues(con, id[0], tableName)
       end
    end
@@ -187,15 +187,15 @@ end
 
 con = Mysql.new 'movieinstance.cnybahrpes0y.us-west-2.rds.amazonaws.com', 'root', 'welcome08', 'myMovies'
 
-getList(con, "movies/opening", "opening", "Movies")
-getList(con, "movies/in_theaters", "in_theaters", "Movies")
-getList(con, "movies/upcoming", "upcoming", "Movies")
-getList(con, "dvds/current_releases", "current_release", "Movies")
-getList(con, "dvds/new_releases", "new_release", "Movies")
-getList(con, "dvds/upcoming", "upcoming_release", "Movies")
+# getList(con, "movies/opening", "opening", "Movies")
+# getList(con, "movies/in_theaters", "in_theaters", "Movies")
+# getList(con, "movies/upcoming", "upcoming", "Movies")
+# getList(con, "dvds/current_releases", "current_release", "Movies")
+# getList(con, "dvds/new_releases", "new_release", "Movies")
+# getList(con, "dvds/upcoming", "upcoming_release", "Movies")
 
 getIMDB(con, "Movies")
-getTrailers(con, "Movies")
+# getTrailers(con, "Movies")
 
 con.close()
 
