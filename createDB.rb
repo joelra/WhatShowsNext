@@ -1,9 +1,9 @@
 require 'mysql'
 
 def create_table(con, tableName)
-   con.query("DROP TABLE IF EXISTS " + tableName)
+   con.query("DROP TABLE IF EXISTS #{tableName}")
    con.query("CREATE TABLE IF NOT EXISTS \
-      " + tableName + "( Id INT PRIMARY KEY AUTO_INCREMENT, \
+      #{tableName}( Id INT PRIMARY KEY AUTO_INCREMENT, \
                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, \
                created_at VARCHAR(255), \
                rotten_id INT(11), \
@@ -37,10 +37,10 @@ def create_table(con, tableName)
                cast_4 VARCHAR(255))")
 end
 
-def createReviewTable(con)
-     con.query("DROP TABLE IF EXISTS Reviews")
+def createReviewTable(con, tableName)
+     con.query("DROP TABLE IF EXISTS #{tableName}")
      con.query("CREATE TABLE IF NOT EXISTS \
-      Reviews( Id INT PRIMARY KEY AUTO_INCREMENT, \
+      #{tableName}( Id INT PRIMARY KEY AUTO_INCREMENT, \
                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, \
                review_id VARCHAR(255), \
                rotten_id INT(11), \
@@ -53,9 +53,19 @@ def createReviewTable(con)
                full_review_link VARCHAR(255))")
 end
 
+def createUpdateTable(con)
+     con.query("CREATE TABLE IF NOT EXISTS \
+          UpdateRecords(Id INT PRIMARY KEY AUTO_INCREMENT, \
+               date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, \
+               message TEXT)")
+end
+
 con = Mysql.new 'movieinstance.cnybahrpes0y.us-west-2.rds.amazonaws.com', 'root', 'welcome08', 'myMovies'
 
 # create_table(con, "Movies")
-# createReviewTable(con)
+# create_table(con, "MovieArchives")
+# createReviewTable(con, "Reviews")
+# createReviewTable(con, "ReviewArchives")
+createUpdateTable(con)
 
 con.close()
