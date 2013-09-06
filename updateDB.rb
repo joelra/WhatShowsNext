@@ -145,7 +145,7 @@ def getIMDB(tableName)
    n_rows.times do |index|
       id = result_set.fetch_row
       if index != -1 && id[0].to_s != "-1"
-         setIMDBValues($con, id[0], tableName)
+         setIMDBValues(id[0], tableName)
       end
    end
    puts "Added IMDB info..."
