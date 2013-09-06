@@ -56,6 +56,6 @@ end
 con = Mysql.new 'movieinstance.cnybahrpes0y.us-west-2.rds.amazonaws.com', 'root', 'welcome08', 'myMovies'
 
 # create_table(con, "Movies")
-createReviewTable(con)
+# createReviewTable(con)
 
 con.close()
