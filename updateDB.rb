@@ -113,7 +113,7 @@ def getTrailers(tableName)
          puts row[0] + "'s trailer has been verified accurate, skipping"
       else
          puts "Updating trailer for " + row[0]
-         setTrailerValues($con, row[0], tableName)
+         setTrailerValues(row[0], tableName)
       end
    end
    puts "Added all trailers..."
@@ -198,7 +198,7 @@ def getReviews(rotten_id)
    n_rows.times do |index|
       id = result_set.fetch_row
       if index != -1 && id[0].to_s != "-1"
-         setReview($con, id[0])
+         setReview(id[0])
       end
    end
    puts "Added Reviews..."
