@@ -3,8 +3,25 @@ require 'json'
 require 'net/http'
 require 'mysql'
 
-$con = Mysql.new 'movieinstance.cnybahrpes0y.us-west-2.rds.amazonaws.com', 'root', 'welcome08', 'myMovies'
-$updateMessage = ""
+def main ()
+   $con = Mysql.new 'movieinstance.cnybahrpes0y.us-west-2.rds.amazonaws.com', 'root', 'welcome08', 'myMovies'
+   $updateMessage = "Successfully Updated Database \n\n Output--------------\n"
+   $api_key = "kej36g99ry7adxc2f37g7tqq"
+   getList("movies/opening", "opening", "Movies")
+   getList("movies/in_theaters", "in_theaters", "Movies")
+   getList("movies/upcoming", "upcoming", "Movies")
+   getList("dvds/current_releases", "current_release", "Movies")
+   getList("dvds/new_releases", "new_release", "Movies")
+   getList("dvds/upcoming", "upcoming_release", "Movies")
+
+   getIMDB("Movies")
+   getTrailers("Movies")
+   getReviews("Reviews")
+
+   setUpdate()
+
+   $con.close()
+end
 
 def sanitize(value, type)
    if type == "string"
@@ -25,62 +42,46 @@ def sanitize(value, type)
 end
 
 def getList(list, status, tableName)
-      
-      api_key = "kej36g99ry7adxc2f37g7tqq"
-      base_url = "http://api.rottentomatoes.com/api/public/v1.0/lists/" + list + ".json?apikey="
-      limit = 50
-      url = "#{base_url}#{api_key}&limit=#{limit}"
-      resp = Net::HTTP.get_response(URI.parse(url))
-      data = resp.body
-      
-      # we $convert the returned JSON data to native Ruby
-      # data structure - a hash
-      result = JSON.parse(data)
+   base_url = "http://api.rottentomatoes.com/api/public/v1.0/lists/" + list + ".json?apikey="
+   limit = 50
+   url = "#{base_url}#{$api_key}&limit=#{limit}"
+   resp = Net::HTTP.get_response(URI.parse(url))
+   data = resp.body
+   result = JSON.parse(data)
 
-      result["movies"].each do |item|
-         begin
-            # Check for existing row already
-            existingRow = $con.query("SELECT * FROM " + tableName + " WHERE rotten_id=" + item["id"])
+   result["movies"].each do |item|
+      begin
+         existingRow = $con.query("SELECT * FROM " + tableName + " WHERE rotten_id=" + item["id"])
+         
+         if defined? existingRow.fetch_row.length
+            updateStatement = "UPDATE Movies SET " + getRottenValues(item, "update", status) + " WHERE rotten_id=" + item["id"]
+            puts "Updating rotten values for " + item["title"]
+            $con.query(updateStatement)
+         else
+            createStatement = "INSERT INTO " + tableName + "(created_at, rotten_id, imdb_id, status, title, year, mpaa_rating, runtime, theater_release, dvd_release, \
+                                             digital_release, rotten_tomatoes_critics_rating, rotten_tomatoes_critics_score, \
+                                             rotten_tomatoes_audience_score, synopsis, artwork, thumbnail, cast_1, cast_2, cast_3, cast_4) \
+                        VALUES(" + getRottenValues(item, "create", status) + ");"
             
-            if defined? existingRow.fetch_row.length
-               #puts("Updating")
-               updateStatement = "UPDATE Movies SET " + getRottenValues(item, "update", status) + " WHERE rotten_id=" + item["id"]
-               #puts updateStatement
-               puts "Updating rotten values for " + item["title"]
-               $con.query(updateStatement)
-            else
-               createStatement = "INSERT INTO " + tableName + "(created_at, rotten_id, imdb_id, status, title, year, mpaa_rating, runtime, theater_release, dvd_release, \
-                                                digital_release, rotten_tomatoes_critics_rating, rotten_tomatoes_critics_score, \
-                                                rotten_tomatoes_audience_score, synopsis, artwork, thumbnail, cast_1, cast_2, cast_3, cast_4) \
-                           VALUES(" + getRottenValues(item, "create", status) + ");"
-               
-               #puts createStatement     
-               puts "Creating rotten values for " + item["title"]
-               $updateMessage += "Added " + item["title"] + "\n"
-               $con.query(createStatement)
-               #puts("Creating")
-            end
-         rescue StandardError => bang
-            $updateMessage += "We've hit an error here man" + bang.to_s + "\n"
+            
+            puts "Creating rotten values for " + item["title"]
+            $updateMessage += "Added " + item["title"] + "\n"
+            $con.query(createStatement)
          end
+      rescue StandardError => bang
+         $updateMessage += "We've hit an error here man" + bang.to_s + "\n"
       end
-   
-
-   # if the hash has 'Error' as a key, we raise an error
-   if result.has_key? 'Error'
-      $updateMessage += "Web service error...\n"
    end
    puts "Success for " + list
 end
 
 def getRottenValues(item, type, status)
    values = ""
-
    if type == "create"
       values = "'" + Time.now.strftime("%d/%m/%Y %H:%M") + "', "
       values += sanitize(item["id"], "int") + ","
    end
-      values += (type == "update" ? "imdb_id=" : "") + sanitize(item["alternate_ids"] ? item["alternate_ids"]["imdb"] : "", "int").to_s + ", \
+      return values + (type == "update" ? "imdb_id=" : "") + sanitize(item["alternate_ids"] ? item["alternate_ids"]["imdb"] : "", "int").to_s + ", \
       " + (type == "update" ? "status=" : "") + "'" + status + "', \
       " + (type == "update" ? "title=" : "") + "'" +  sanitize(item["title"], "string") + "', \
       " + (type == "update" ? "year=" : "") + sanitize(item["year"], "int") + ", \
@@ -99,8 +100,6 @@ def getRottenValues(item, type, status)
       " + (type == "update" ? "cast_2=" : "") + "'" +  sanitize((item["abridged_cast"].length >= 2 ? item["abridged_cast"][1]["name"] : ""), "string") + "', \
       " + (type == "update" ? "cast_3=" : "") + "'" +  sanitize((item["abridged_cast"].length >= 3 ? item["abridged_cast"][2]["name"] : ""), "string") + "', \
       " + (type == "update" ? "cast_4=" : "") + "'" + sanitize((item["abridged_cast"].length >= 4 ? item["abridged_cast"][3]["name"] : ""), "string") + "'"
-
-      return values
 end
 
 def getTrailers(tableName)
@@ -122,16 +121,10 @@ end
 def setTrailerValues(title, tableName)
    begin
       url = "http://trailersapi.com/trailers.json?movie=" + title[0].gsub("%","").gsub(" ", "%20").gsub("'", "")
-      # puts url
-      # url = "#{base_url}#{api_key}&limit=#{limit}"
       resp = Net::HTTP.get_response(URI.parse(url))
       data = resp.body
-      
-      # we $convert the returned JSON data to native Ruby
-      # data structure - a hash
       result = JSON.parse(data)
       updateStatement = "UPDATE " + tableName + " SET trailer_link='" + sanitize((result[0] ? result[0]["code"].match(/src="(.+?)"/)[1] : ""), "string") + "' WHERE title='" + sanitize(title[0], "string") + "'"
-      # puts updateStatement
       $con.query(updateStatement)
    rescue StandardError
       puts "Error retreiving a trailer..."
@@ -141,7 +134,6 @@ end
 def getIMDB(tableName)
    result_set = $con.query("SELECT `imdb_id` FROM " + tableName)
    n_rows = result_set.num_rows
-
    n_rows.times do |index|
       id = result_set.fetch_row
       if index != -1 && id[0].to_s != "-1"
@@ -155,21 +147,14 @@ end
 def setIMDBValues(id, tableName)
    begin
       url = "http://mymovieapi.com/?id=tt#{id}&type=json&plot=full&episode=1&lang=en-US&aka=full&release=full&business=1&tech=1"
-      # puts url
-      # url = "#{base_url}#{api_key}&limit=#{limit}"
       resp = Net::HTTP.get_response(URI.parse(url))
       data = resp.body
-      
-      # we $convert the returned JSON data to native Ruby
-      # data structure - a hash
       result = JSON.parse(data)
-
       updateStatement = "UPDATE " + tableName + " SET " + getIMDBValues(result) + " WHERE imdb_id=" + id
-      # puts updateStatement
       puts "Updating IMDB values for " + id
       $con.query(updateStatement)
    rescue StandardError => err
-      puts "Error parsing json (some server error...)"
+      $updateMessage += "Setting IMDB Values Error Encountered... \n"
    end
 end
 
@@ -205,8 +190,7 @@ def getReviews(rotten_id)
 end
 
 def setReview(rotten_id)
-   api_key = "kej36g99ry7adxc2f37g7tqq"
-   url = "http://api.rottentomatoes.com/api/public/v1.0/movies/#{rotten_id}/reviews.json?apikey=#{api_key}"
+   url = "http://api.rottentomatoes.com/api/public/v1.0/movies/#{rotten_id}/reviews.json?apikey=#{$api_key}"
    resp = Net::HTTP.get_response(URI.parse(url))
    data = resp.body
    result = JSON.parse(data)
@@ -256,19 +240,4 @@ def setUpdate ()
    $con.query(statement)
 end
 
-getList("movies/opening", "opening", "Movies")
-getList("movies/in_theaters", "in_theaters", "Movies")
-getList("movies/upcoming", "upcoming", "Movies")
-getList("dvds/current_releases", "current_release", "Movies")
-getList("dvds/new_releases", "new_release", "Movies")
-getList("dvds/upcoming", "upcoming_release", "Movies")
-
-getIMDB("Movies")
-getTrailers("Movies")
-getReviews("Reviews")
-
-setUpdate()
-
-$con.close()
-
-
+main()
