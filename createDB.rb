@@ -1,3 +1,5 @@
+require 'mysql'
+
 def create_table(con, tableName)
    con.query("DROP TABLE IF EXISTS " + tableName)
    con.query("CREATE TABLE IF NOT EXISTS \
@@ -35,8 +37,25 @@ def create_table(con, tableName)
                cast_4 VARCHAR(255))")
 end
 
+def createReviewTable(con)
+     con.query("DROP TABLE IF EXISTS Reviews")
+     con.query("CREATE TABLE IF NOT EXISTS \
+      Reviews( Id INT PRIMARY KEY AUTO_INCREMENT, \
+               updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, \
+               review_id VARCHAR(255), \
+               rotten_id INT(11), \
+               date VARCHAR(255), \
+               critic VARCHAR(255), \
+               freshness VARCHAR(255), \
+               publication VARCHAR(255), \
+               quote TEXT, \
+               original_score VARCHAR(255), \
+               full_review_link VARCHAR(255))")
+end
+
 con = Mysql.new 'movieinstance.cnybahrpes0y.us-west-2.rds.amazonaws.com', 'root', 'welcome08', 'myMovies'
 
-create_table(con, "Movies")
+# create_table(con, "Movies")
+createReviewTable(con)
 
 con.close()

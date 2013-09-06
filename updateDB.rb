@@ -185,17 +185,79 @@ def getIMDBValues(item)
             directors='" + sanitize((item["directors"] ? item["directors"].join(', ') : ""), "string") + "'"
 end
 
+
+
+def getReviews(con, rotten_id)
+   result_set = con.query("SELECT `rotten_id` FROM Movies")
+   n_rows = result_set.num_rows
+
+   n_rows.times do |index|
+      id = result_set.fetch_row
+      if index != -1 && id[0].to_s != "-1"
+         setReview(con, id[0])
+      end
+   end
+   puts "Added Reviews..."
+end
+
+def setReview(con, rotten_id)
+   api_key = "kej36g99ry7adxc2f37g7tqq"
+   url = "http://api.rottentomatoes.com/api/public/v1.0/movies/#{rotten_id}/reviews.json?apikey=#{api_key}"
+   resp = Net::HTTP.get_response(URI.parse(url))
+   data = resp.body
+   result = JSON.parse(data)
+   result_set = con.query("SELECT * FROM Reviews WHERE rotten_id = #{rotten_id}")
+   if defined? result_set.fetch_row.length
+      result["reviews"].each do |item|
+         updateStatement = "UPDATE Reviews SET " + getReviewValues(item, "update", rotten_id) + " WHERE review_id='" + getReviewID(rotten_id, item) + "'"
+         con.query(updateStatement)
+         puts "Updated Review values for #{rotten_id}"
+      end
+   else
+      result["reviews"].each do |item|
+         createStatement = "INSERT INTO Reviews(review_id, critic, rotten_id, date, freshness, original_score, publication, quote, full_review_link)
+                           VALUES(" + getReviewValues(item, "create", rotten_id) + ");"
+         
+         con.query(createStatement)
+         puts "Created Reviews for #{rotten_id}"
+      end
+   end
+end
+
+def getReviewValues (item, type, rotten_id)
+   full_review_link = "NA"
+   if(item["links"])
+      if(item["links"]["review"])
+         full_review_link = ["links"][0]["review"]
+      end
+   end
+   return (type == "update" ? "review_id=" : "") + "'" + getReviewID(rotten_id, item) + "'," + 
+         (type == "update" ? "critic=" : "") + "'" + sanitize(item["critic"], "string") + "'," +
+         (type == "update" ? "rotten_id=" : "") + rotten_id + "," +
+         (type == "update" ? "date=" : "") + item["date"] + "," +
+         (type == "update" ? "freshness=" : "") + "'" + sanitize(item["freshness"], "string") + "'," +
+         (type == "update" ? "original_score=" : "") + "'" + sanitize(item["original_score"], "string") + "'," +
+         (type == "update" ? "publication=" : "") + "'" + sanitize(item["publication"], "string") + "'," +
+         (type == "update" ? "quote=" : "") + "'" + sanitize(item["quote"], "string") + "'," +
+         (type == "update" ? "full_review_link=" : "") + "'" + sanitize(full_review_link, "string") + "'"
+end
+
+def getReviewID (rotten_id, item)
+   return review_id = (rotten_id + item["critic"] + item["publication"]).gsub(" ","_").gsub("'","")
+end
+
 con = Mysql.new 'movieinstance.cnybahrpes0y.us-west-2.rds.amazonaws.com', 'root', 'welcome08', 'myMovies'
 
-# getList(con, "movies/opening", "opening", "Movies")
-# getList(con, "movies/in_theaters", "in_theaters", "Movies")
-# getList(con, "movies/upcoming", "upcoming", "Movies")
-# getList(con, "dvds/current_releases", "current_release", "Movies")
-# getList(con, "dvds/new_releases", "new_release", "Movies")
-# getList(con, "dvds/upcoming", "upcoming_release", "Movies")
+getList(con, "movies/opening", "opening", "Movies")
+getList(con, "movies/in_theaters", "in_theaters", "Movies")
+getList(con, "movies/upcoming", "upcoming", "Movies")
+getList(con, "dvds/current_releases", "current_release", "Movies")
+getList(con, "dvds/new_releases", "new_release", "Movies")
+getList(con, "dvds/upcoming", "upcoming_release", "Movies")
 
 getIMDB(con, "Movies")
-# getTrailers(con, "Movies")
+getTrailers(con, "Movies")
+getReviews(con, "Reviews")
 
 con.close()
 
