@@ -4,7 +4,7 @@ require 'net/http'
 require 'mysql'
 
 def main ()
-   $con = Mysql.new 'movieinstance.cnybahrpes0y.us-west-2.rds.amazonaws.com', 'root', 'welcome08', 'myMovies'
+   $con = Mysql.new 'localhost', 'regist6_movies', 'o7_r7S{(_-Rp', 'myMovies'
    $updateMessage = "Successfully Updated Database \n\n Output--------------\n"
    $api_key = "kej36g99ry7adxc2f37g7tqq"
    getList("movies/opening", "opening", "Movies")
