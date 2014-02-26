@@ -2,9 +2,10 @@ require 'rubygems'
 require 'json'
 require 'net/http'
 require 'mysql'
+require 'nokogiri'
 
 def main ()
-   $con = Mysql.new 'localhost', 'registf6_movies', 'o7_r7S{(_-Rp', 'myMovies'
+   $con = Mysql.new 'localhost', 'registf6_movies', 'o7_r7S{(_-Rp', 'registf6_myMovies'
    $updateMessage = "Successfully Updated Database \n\n Output--------------\n"
    $api_key = "kej36g99ry7adxc2f37g7tqq"
    getList("movies/opening", "opening", "Movies")
@@ -103,7 +104,7 @@ def getRottenValues(item, type, status)
 end
 
 def getTrailers(tableName)
-   result_set = $con.query("SELECT `title`, `trailer_checked` FROM " + tableName)
+   result_set = $con.query("SELECT `imdb_id`, `trailer_checked` FROM " + tableName)
    n_rows = result_set.num_rows
 
    n_rows.times do |index|
@@ -120,11 +121,15 @@ end
 
 def setTrailerValues(title, tableName)
    begin
-      url = "http://trailersapi.com/trailers.json?movie=" + title[0].gsub("%","").gsub(" ", "%20").gsub("'", "")
+      url = "http://api.traileraddict.com/?imdb="+title+"&count=4&width=680"
       resp = Net::HTTP.get_response(URI.parse(url))
       data = resp.body
-      result = JSON.parse(data)
-      updateStatement = "UPDATE " + tableName + " SET trailer_link='" + sanitize((result[0] ? result[0]["code"].match(/src="(.+?)"/)[1] : ""), "string") + "' WHERE title='" + sanitize(title[0], "string") + "'"
+      
+      doc = Nokogiri::XML(data)
+      movie =doc.search('//trailer')
+      movieLink   = movie.at('link').text
+
+      updateStatement = "UPDATE " + tableName + " SET trailer_link='" + movieLink.gsub("'", %q(\\\')) + "' WHERE imdb_id='" + sanitize(title, "string") + "'"
       $con.query(updateStatement)
    rescue StandardError
       puts "Error retreiving a trailer..."
@@ -146,11 +151,11 @@ end
 
 def setIMDBValues(id, tableName)
    begin
-      url = "http://mymovieapi.com/?id=tt#{id}&type=json&plot=full&episode=1&lang=en-US&aka=full&release=full&business=1&tech=1"
+      url = "http://www.omdbapi.com/?i=tt"+id
       resp = Net::HTTP.get_response(URI.parse(url))
       data = resp.body
       result = JSON.parse(data)
-      updateStatement = "UPDATE " + tableName + " SET " + getIMDBValues(result) + " WHERE imdb_id=" + id
+      updateStatement = "UPDATE " + tableName + " SET " + getIMDBValues(result) + " WHERE imdb_id='" + id +"'"
       puts "Updating IMDB values for " + id
       $con.query(updateStatement)
    rescue StandardError => err
@@ -160,18 +165,11 @@ end
 
 def getIMDBValues(item)
    budget = "NA"
-   if(item["business"])
-      if(item["business"]["budget"])
-         budget = sanitize(item["business"]["budget"][0]["money"], "string")
-      end
-   end
-   return "imdb_link='" + sanitize(item["imdb_url"], "string") + "', \
-            budget='" + budget + "', \
-            genres='" + sanitize((item["genres"] ? item["genres"].join(', ') : ""), "string") + "', \
-            writers='" + sanitize((item["writers"] ? item["writers"].join(', ') : ""), "string") + "', \
-            limited='" + sanitize((item["release_date"] ? item["release_date"][0]["remarks"] : "False") , "string") + "', \
-            actors='" + sanitize((item["actors"] ? item["actors"].join(', ') : ""), "string") + "', \
-            directors='" + sanitize((item["directors"] ? item["directors"].join(', ') : ""), "string") + "'"
+   
+    return "genres='"    + item["Genre"].gsub("'", %q(\\\')) + "', \
+    	    writers='"   + item["Writer"].gsub("'", %q(\\\')) + "', \
+            actors='"    + item["Actors"].gsub("'", %q(\\\')) + "', \
+            directors='" + item["Director"].gsub("'", %q(\\\')) + "'"
 end
 
 

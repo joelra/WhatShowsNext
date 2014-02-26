@@ -60,12 +60,12 @@ def createUpdateTable(con)
                message TEXT)")
 end
 
-con = Mysql.new 'localhost', 'registf6_movies', 'o7_r7S{(_-Rp', 'myMovies'
+con = Mysql.new 'localhost', 'registf6_movies', 'o7_r7S{(_-Rp', 'registf6_myMovies'
 
-# create_table(con, "Movies")
-# create_table(con, "MovieArchives")
-# createReviewTable(con, "Reviews")
-# createReviewTable(con, "ReviewArchives")
+create_table(con, "Movies")
+create_table(con, "MovieArchives")
+createReviewTable(con, "Reviews")
+createReviewTable(con, "ReviewArchives")
 createUpdateTable(con)
 
 con.close()
