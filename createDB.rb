@@ -19,6 +19,8 @@ def create_table(con, tableName)
                rotten_tomatoes_critics_rating VARCHAR(255), \
                rotten_tomatoes_critics_score VARCHAR(255), \
                rotten_tomatoes_audience_score VARCHAR(255), \
+               metascore VARCHAR(255), \
+               imdb_rating VARCHAR(255), \
                synopsis TEXT, \
                artwork VARCHAR(255), \
                thumbnail VARCHAR(255), \

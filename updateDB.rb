@@ -34,7 +34,7 @@ def sanitize(value, type)
       end
    elsif type == "int"
       if value == ''
-         return '-1'
+         return 'N/A'
       else
          return value.to_s
       end
@@ -95,7 +95,7 @@ def getRottenValues(item, type, status)
       " + (type == "update" ? "rotten_tomatoes_critics_score=" : "") + "'" +  sanitize(item["ratings"] ? item["ratings"]["critics_score"] : "", "string") + "', \
       " + (type == "update" ? "rotten_tomatoes_audience_score=" : "") + "'" +  sanitize(item["ratings"] ? item["ratings"]["audience_score"] : "", "string") + "', \
       " + (type == "update" ? "synopsis=" : "") + "'" +  sanitize(item["synopsis"], "string") + "', \
-      " + (type == "update" ? "artwork=" : "") + "'" +  sanitize(item["posters"] ? item["posters"]["original"] : "", "string") + "', \
+      " + (type == "update" ? "artwork=" : "") + "'" +  sanitize(item["posters"] ? item["posters"]["detailed"] : "", "string") + "', \
       " + (type == "update" ? "thumbnail=" : "") + "'" +  sanitize(item["posters"] ? item["posters"]["thumbnail"] : "", "string") + "', \
       " + (type == "update" ? "cast_1=" : "") + "'" +  sanitize((item["abridged_cast"].length >= 1 ? item["abridged_cast"][0]["name"] : ""), "string") + "', \
       " + (type == "update" ? "cast_2=" : "") + "'" +  sanitize((item["abridged_cast"].length >= 2 ? item["abridged_cast"][1]["name"] : ""), "string") + "', \
@@ -169,7 +169,9 @@ def getIMDBValues(item)
     return "genres='"    + item["Genre"].gsub("'", %q(\\\')) + "', \
     	    writers='"   + item["Writer"].gsub("'", %q(\\\')) + "', \
             actors='"    + item["Actors"].gsub("'", %q(\\\')) + "', \
-            directors='" + item["Director"].gsub("'", %q(\\\')) + "'"
+            directors='" + item["Director"].gsub("'", %q(\\\')) + "', \
+            metascore='" + item["Metascore"].gsub("'", %q(\\\')) + "', \
+            imdb_rating ='" + item["imdbRating"].gsub("'", %q(\\\')) + "'"
 end
 
 
