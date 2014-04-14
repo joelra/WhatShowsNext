@@ -121,13 +121,13 @@ end
 
 def setTrailerValues(title, tableName)
    begin
-      url = "http://api.traileraddict.com/?imdb="+title+"&count=4&width=680"
+      url = "http://api.traileraddict.com/?imdb="+title+"&count=4&width=300"
       resp = Net::HTTP.get_response(URI.parse(url))
       data = resp.body
       
       doc = Nokogiri::XML(data)
       movie =doc.search('//trailer')
-      movieLink   = movie.at('link').text
+      movieLink   = movie.at('embed').text
 
       updateStatement = "UPDATE " + tableName + " SET trailer_link='" + movieLink.gsub("'", %q(\\\')) + "' WHERE imdb_id='" + sanitize(title, "string") + "'"
       $con.query(updateStatement)
